@@ -1,0 +1,143 @@
+package repositories
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"prestasi-mahasiswa-api/models"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type UserRepository interface {
+	FindUserByUsernameOrEmail(ctx context.Context, identifier string) (*models.User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
+	// Metode untuk CRUD User oleh Admin akan ditambahkan di Commit #8
+}
+
+type userRepository struct {
+	db *pgxpool.Pool
+}
+
+func NewUserRepository(db *pgxpool.Pool) UserRepository {
+	return &userRepository{db: db}
+}
+
+// scanUserRow adalah helper untuk menscan hasil query user ke struct models.User
+func scanUserRow(row pgx.Row) (*models.User, error) {
+	user := models.User{}
+	var permissionsPgArray []string
+	
+	// Query ini hanya digunakan untuk GetUserByID (tanpa password_hash)
+	// Kita akan menggunakan versi query yang lebih lengkap untuk FindUserByUsernameOrEmail
+	
+	// Catatan: Karena GetUserByID tidak butuh password_hash, kita buat versi query yang lebih aman.
+	// Namun, untuk menyederhanakan, kita akan pakai FindUserByUsernameOrEmail untuk Login.
+	// Implementasi ini akan menyesuaikan dengan GetUserByID (tanpa password_hash)
+	
+	err := row.Scan(
+		&user.ID, 
+		&user.Username, 
+		&user.Email, 
+		&user.FullName, 
+		&user.Role, 
+		&user.IsActive, 
+		&permissionsPgArray,
+	)
+	
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("database query failed: %w", err)
+	}
+	
+	user.Permissions = permissionsPgArray
+	return &user, nil
+}
+
+
+// FindUserByUsernameOrEmail mengambil user, role, dan permissions untuk Login (FR-001)
+func (r *userRepository) FindUserByUsernameOrEmail(ctx context.Context, identifier string) (*models.User, error) {
+	// Termasuk password_hash untuk validasi login
+	query := `
+        SELECT 
+            u.id, u.username, u.email, u.password_hash, u.full_name, r.name AS role, u.is_active, 
+            ARRAY(
+                SELECT p.name 
+                FROM role_permissions rp 
+                JOIN permissions p ON rp.permission_id = p.id 
+                WHERE rp.role_id = r.id
+            ) AS permissions
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE u.username = $1 OR u.email = $1
+    `
+	user := models.User{}
+	var permissionsPgArray []string
+	
+	err := r.db.QueryRow(ctx, query, strings.ToLower(identifier)).Scan(
+		&user.ID, 
+		&user.Username, 
+		&user.Email, 
+		&user.PasswordHash, // Tambahan untuk Login
+		&user.FullName, 
+		&user.Role, 
+		&user.IsActive, 
+		&permissionsPgArray,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("database query failed: %w", err)
+	}
+
+	user.Permissions = permissionsPgArray
+	return &user, nil
+}
+
+// GetUserByID mengambil user berdasarkan ID untuk endpoint Profile
+func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	// Tidak termasuk password_hash
+	query := `
+        SELECT 
+            u.id, u.username, u.email, u.full_name, r.name AS role, u.is_active, 
+            ARRAY(
+                SELECT p.name 
+                FROM role_permissions rp 
+                JOIN permissions p ON rp.permission_id = p.id 
+                WHERE rp.role_id = r.id
+            ) AS permissions
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE u.id = $1
+    `
+	user := models.User{}
+	var permissionsPgArray []string
+	
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&user.ID, 
+		&user.Username, 
+		&user.Email, 
+		&user.FullName, 
+		&user.Role, 
+		&user.IsActive, 
+		&permissionsPgArray,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("database query failed: %w", err)
+	}
+
+	user.Permissions = permissionsPgArray
+	return &user, nil
+}
