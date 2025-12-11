@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/mongo"

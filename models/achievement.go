@@ -6,38 +6,64 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// AchievementReference merepresentasikan data dari tabel achievement_references (PostgreSQL)
+// AchievementReference (PostgreSQL)
 type AchievementReference struct {
-    ID                   uuid.UUID `json:"id"`
-    StudentID            uuid.UUID `json:"studentId"`
-    MongoAchievementID   string    `json:"mongoAchievementId"` // FOREIGN KEY ke MongoDB
-    Status               string    `json:"status"` // ENUM: 'draft', 'submitted', 'verified', 'rejected' [cite: 96]
-    SubmittedAt          *time.Time `json:"submittedAt"`
-    VerifiedAt           *time.Time `json:"verifiedAt"`
-    VerifiedBy           *uuid.UUID `json:"verifiedBy"`
-    RejectionNote        *string   `json:"rejectionNote"`
-    CreatedAt            time.Time `json:"createdAt"`
-    UpdatedAt            time.Time `json:"updatedAt"`
+	ID                 uuid.UUID  `json:"id"`
+	StudentID          uuid.UUID  `json:"studentId"`
+	MongoAchievementID string     `json:"mongoAchievementId"`
+	Status             string     `json:"status"`
+	SubmittedAt        *time.Time `json:"submittedAt"`
+	VerifiedAt         *time.Time `json:"verifiedAt"`
+	VerifiedBy         *uuid.UUID `json:"verifiedBy"`
+	RejectionNote      *string    `json:"rejectionNote"`
+	CreatedAt          time.Time  `json:"createdAt"`
+	UpdatedAt          time.Time  `json:"updatedAt"`
+	IsDeleted          bool       `json:"isDeleted"`
 }
 
-// Achievement merepresentasikan data dari collection achievements (MongoDB) [cite: 107]
+// Achievement (MongoDB)
 type Achievement struct {
-    ID              primitive.ObjectID `bson:"_id,omitempty"`
-    StudentUUID     uuid.UUID          `bson:"studentId"` // Reference to PostgreSQL [cite: 110]
-    AchievementType string             `bson:"achievementType"` // e.g., 'competition', 'publication' [cite: 111]
-    Title           string             `bson:"title"` [cite: 112]
-    Description     string             `bson:"description"` [cite: 113]
-    Details         map[string]interface{} `bson:"details"` // Field dinamis [cite: 114]
-    Attachments     []AttachmentFile   `bson:"attachments"`
-    Tags            []string           `bson:"tags"` [cite: 153]
-    Points          int                `bson:"points"` [cite: 154]
-    CreatedAt       time.Time          `bson:"createdAt"` [cite: 155]
-    UpdatedAt       time.Time          `bson:"updatedAt"` [cite: 156]
+	ID              primitive.ObjectID     `bson:"_id,omitempty"`
+	StudentUUID     uuid.UUID              `bson:"studentId"`
+	AchievementType string                 `bson:"achievementType"`
+	Title           string                 `bson:"title"`
+	Description     string                 `bson:"description"`
+	Details         map[string]interface{} `bson:"details"`
+	Attachments     []AttachmentFile       `bson:"attachments"`
+	Tags            []string               `bson:"tags"`
+	Points          int                    `bson:"points"`
+	CreatedAt       time.Time              `bson:"createdAt"`
+	UpdatedAt       time.Time              `bson:"updatedAt"`
+	IsDeleted       bool                   `bson:"isDeleted"`
 }
 
 type AttachmentFile struct {
-    FileName string    `bson:"fileName"` [cite: 148]
-    FileUrl  string    `bson:"fileUrl"` [cite: 149]
-    FileType string    `bson:"fileType"` [cite: 150]
-    UploadedAt time.Time `bson:"uploadedAt"` [cite: 151]
+	FileName   string    `bson:"fileName"`
+	FileUrl    string    `bson:"fileUrl"`
+	FileType   string    `bson:"fileType"`
+	UploadedAt time.Time `bson:"uploadedAt"`
+}
+
+// Struct untuk Request Creation
+type CreateAchievementRequest struct {
+	AchievementType string                 `json:"achievementType"`
+	Title           string                 `json:"title"`
+	Description     string                 `json:"description"`
+	Details         map[string]interface{} `json:"details"`
+	Tags            []string               `json:"tags"`
+	Points          int                    `json:"points"`
+}
+
+// Struct untuk Response Detail (Gabungan SQL + Mongo) - INI YANG HILANG SEBELUMNYA
+type AchievementDetailResponse struct {
+	RefID           uuid.UUID              `json:"refId"`
+	Status          string                 `json:"status"`
+	AchievementType string                 `json:"achievementType"`
+	Title           string                 `json:"title"`
+	Description     string                 `json:"description"`
+	Details         map[string]interface{} `json:"details"`
+	Points          int                    `json:"points"`
+	RejectionNote   *string                `json:"rejectionNote,omitempty"`
+	SubmittedAt     *time.Time             `json:"submittedAt,omitempty"`
+	VerifiedAt      *time.Time             `json:"verifiedAt,omitempty"`
 }

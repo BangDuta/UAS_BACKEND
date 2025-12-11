@@ -32,12 +32,6 @@ func scanUserRow(row pgx.Row) (*models.User, error) {
 	user := models.User{}
 	var permissionsPgArray []string
 	
-	// Query ini hanya digunakan untuk GetUserByID (tanpa password_hash)
-	// Kita akan menggunakan versi query yang lebih lengkap untuk FindUserByUsernameOrEmail
-	
-	// Catatan: Karena GetUserByID tidak butuh password_hash, kita buat versi query yang lebih aman.
-	// Namun, untuk menyederhanakan, kita akan pakai FindUserByUsernameOrEmail untuk Login.
-	// Implementasi ini akan menyesuaikan dengan GetUserByID (tanpa password_hash)
 	
 	err := row.Scan(
 		&user.ID, 
@@ -140,4 +134,75 @@ func (r *userRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models
 
 	user.Permissions = permissionsPgArray
 	return &user, nil
+}
+
+// ... (tambah method ke interface UserRepository)
+
+// GetAdvisorIDByUserID mengambil advisor_id (UUID) dari tabel students
+func (r *userRepository) GetAdvisorIDByUserID(ctx context.Context, studentUserID uuid.UUID) (uuid.UUID, error) {
+    query := `
+        SELECT s.advisor_id 
+        FROM students s 
+        WHERE s.user_id = $1
+    `
+    var advisorID uuid.UUID // Ini adalah ID dari tabel Lecturers
+    err := r.db.QueryRow(ctx, query, studentUserID).Scan(&advisorID)
+    
+    if errors.Is(err, pgx.ErrNoRows) {
+        return uuid.Nil, errors.New("student advisor not found")
+    }
+    if err != nil {
+        return uuid.Nil, fmt.Errorf("database query failed: %w", err)
+    }
+    return advisorID, nil
+}
+
+// GetAdviseeStudentUserIDsByAdvisorUserID mengambil semua Student USER IDs yang dibimbing oleh Dosen Wali ini
+func (r *userRepository) GetAdviseeStudentUserIDsByAdvisorUserID(ctx context.Context, advisorUserID uuid.UUID) ([]uuid.UUID, error) {
+    query := `
+        SELECT s.user_id
+        FROM students s
+        JOIN lecturers l ON s.advisor_id = l.id
+        WHERE l.user_id = $1
+    `
+    rows, err := r.db.Query(ctx, query, advisorUserID)
+    if err != nil {
+        return nil, fmt.Errorf("database query failed: %w", err)
+    }
+    defer rows.Close()
+
+    var studentUserIDs []uuid.UUID
+    for rows.Next() {
+        var id uuid.UUID
+        if err := rows.Scan(&id); err != nil {
+            return nil, fmt.Errorf("error scanning student ID: %w", err)
+        }
+        studentUserIDs = append(studentUserIDs, id)
+    }
+    return studentUserIDs, nil
+}
+
+// GetAdviseeStudentIDsByAdvisorUserID mengambil semua Student IDs yang dibimbing oleh Dosen Wali ini
+func (r *userRepository) GetAdviseeStudentIDsByAdvisorUserID(ctx context.Context, advisorUserID uuid.UUID) ([]uuid.UUID, error) {
+    query := `
+        SELECT s.user_id
+        FROM students s
+        JOIN lecturers l ON s.advisor_id = l.id
+        WHERE l.user_id = $1
+    `
+    rows, err := r.db.Query(ctx, query, advisorUserID)
+    if err != nil {
+        return nil, fmt.Errorf("database query failed: %w", err)
+    }
+    defer rows.Close()
+
+    var studentUserIDs []uuid.UUID
+    for rows.Next() {
+        var id uuid.UUID
+        if err := rows.Scan(&id); err != nil {
+            return nil, fmt.Errorf("error scanning student ID: %w", err)
+        }
+        studentUserIDs = append(studentUserIDs, id)
+    }
+    return studentUserIDs, nil
 }
