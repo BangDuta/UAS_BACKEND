@@ -91,3 +91,91 @@ func (rm *RouteManager) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.RespondWithJSON(w, httpStatus, resp)
 }
+
+// ... di dalam func SetupRoutes ...
+
+	rm := NewRouteManager(pgDB, mongoClient) // Update NewRouteManager agar menginjeksikan AchievementRepo
+
+	// ... Auth Routes
+
+	// 5.4 Achievements (Mahasiswa - FR-003, FR-005)
+	achievements := v1.PathPrefix("/achievements").Subrouter()
+	
+	// POST /achievements (FR-003) - requires achievement:create
+	achievements.HandleFunc("", middleware.RBACRequired("achievement:create", rm.CreateAchievement)).Methods("POST")
+	
+	// DELETE /achievements/:id (FR-005) - requires achievement:delete
+	achievements.HandleFunc("/{id}", middleware.RBACRequired("achievement:delete", rm.DeleteAchievement)).Methods("DELETE")
+	
+	// ... Tambahkan route untuk UpdateAchievement di sini
+}
+
+// ... Tambahkan NewRouteManager agar menginjeksikan AchievementRepo
+func NewRouteManager(pgDB *pgxpool.Pool, mongoClient *mongo.Client) *RouteManager {
+	// Repositories
+	userRepo := repositories.NewUserRepository(pgDB)
+	achieveRepo := repositories.NewAchievementRepository(pgDB, mongoClient) // Injeksi AchievmentRepo
+
+	return &RouteManager{
+		AuthService: services.NewAuthService(userRepo),
+		AchievementService: services.NewAchievementService(achieveRepo), // Injeksi AchievmentService
+	}
+}
+
+// --- Tambahkan Implementasi Route Methods untuk Achievement ---
+
+// CreateAchievement menangani POST /api/v1/achievements (FR-003)
+func (rm *RouteManager) CreateAchievement(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetUserClaims(r.Context())
+	
+	var req models.CreateAchievementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	
+	studentID := claims.UserID // Asumsi claims.UserID adalah StudentID (Role Mahasiswa)
+	
+	ref, httpStatus, err := rm.AchievementService.CreateDraft(r.Context(), studentID, &req)
+	if err != nil {
+		utils.RespondWithError(w, httpStatus, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, httpStatus, map[string]interface{}{
+		"status": "success",
+		"message": "Achievement draft created successfully",
+		"data": ref,
+	})
+}
+
+// DeleteAchievement menangani DELETE /api/v1/achievements/:id (FR-005)
+func (rm *RouteManager) DeleteAchievement(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetUserClaims(r.Context())
+	
+	vars := mux.Vars(r)
+	idStr, ok := vars["id"]
+	if !ok {
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing achievement ID")
+		return
+	}
+	
+	achievementRefID, err := uuid.Parse(idStr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid achievement ID format")
+		return
+	}
+
+	studentID := claims.UserID
+	
+	httpStatus, err := rm.AchievementService.DeleteDraft(r.Context(), studentID, achievementRefID)
+	if err != nil {
+		utils.RespondWithError(w, httpStatus, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, httpStatus, map[string]string{
+		"status": "success",
+		"message": "Achievement draft deleted successfully",
+	})
+}
