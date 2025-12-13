@@ -30,27 +30,26 @@ func (s *authService) PerformLogin(ctx context.Context, username, password strin
 	// 1. Dapatkan user dari database
 	user, err := s.userRepo.FindUserByUsernameOrEmail(ctx, username)
 	if err != nil {
-		// Asumsi repository mengembalikan error saat user not found
-		return nil, http.StatusUnauthorized, errors.New("Invalid credentials")
+		[cite_start]return nil, http.StatusUnauthorized, errors.New("invalid credentials") // 401 Unauthorized [cite: 348]
 	}
 
 	// 2. Sistem memvalidasi kredensial
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
-		return nil, http.StatusUnauthorized, errors.New("Invalid credentials")
+		return nil, http.StatusUnauthorized, errors.New("invalid credentials")
 	}
 
 	// 3. Sistem mengecek status aktif user
 	if !user.IsActive {
-		return nil, http.StatusForbidden, errors.New("User account is inactive")
+		[cite_start]return nil, http.StatusForbidden, errors.New("user account is inactive") // 403 Forbidden [cite: 348]
 	}
 
-	// 4. Sistem generate JWT token dengan role dan permissions
+	[cite_start]// 4. Sistem generate JWT token dengan role dan permissions [cite: 169]
 	accessToken, refreshToken, err := utils.GenerateAuthTokens(user.ID.String(), user.Role, user.Permissions)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// 5. Return token dan user profile
+	[cite_start]// 5. Return token dan user profile [cite: 170]
 	profile := models.UserProfile{
 		ID:          user.ID.String(),
 		Username:    user.Username,
@@ -70,11 +69,11 @@ func (s *authService) PerformLogin(ctx context.Context, username, password strin
 	return resp, http.StatusOK, nil
 }
 
-// GetProfile (dipanggil dari AuthRequired middleware atau route profile)
+// GetProfile
 func (s *authService) GetProfile(ctx context.Context, userID uuid.UUID) (*models.UserProfile, int, error) {
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		return nil, http.StatusNotFound, errors.New("User profile not found")
+		[cite_start]return nil, http.StatusNotFound, errors.New("user profile not found") // 404 Not Found [cite: 348]
 	}
 
 	profile := models.UserProfile{

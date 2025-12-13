@@ -17,11 +17,11 @@ func ConnectDatabases() (*pgxpool.Pool, *mongo.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// --- 1. PostgreSQL (Relational Data & RBAC) ---
+	// --- 1. PostgreSQL ---
 	pgURL := os.Getenv("POSTGRES_URL")
 	if pgURL == "" {
-		log.Println("POSTGRES_URL not set. Using default.")
-		pgURL = "postgres://user:password@localhost:5432/prestasi_db"
+		// Enforce environment variable usage for security
+		return nil, nil, fmt.Errorf("POSTGRES_URL environment variable is required")
 	}
 
 	pgConn, err := pgxpool.New(ctx, pgURL)
@@ -34,11 +34,10 @@ func ConnectDatabases() (*pgxpool.Pool, *mongo.Client, error) {
 	}
 	log.Println("✅ Connected to PostgreSQL successfully.")
 
-	// --- 2. MongoDB (Dynamic Achievement Data) ---
+	// --- 2. MongoDB ---
 	mongoURL := os.Getenv("MONGO_URL")
 	if mongoURL == "" {
-		log.Println("MONGO_URL not set. Using default.")
-		mongoURL = "mongodb://localhost:27017"
+		return nil, nil, fmt.Errorf("MONGO_URL environment variable is required")
 	}
 	
 	clientOptions := options.Client().ApplyURI(mongoURL)

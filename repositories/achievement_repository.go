@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	// "strings" dihapus karena unused
 
 	"prestasi-mahasiswa-api/models"
 
@@ -27,6 +26,10 @@ type AchievementRepository interface {
 	SoftDeleteAchievementAndReference(ctx context.Context, achievementRefID uuid.UUID, studentID uuid.UUID) error
 	UpdateReferenceStatus(ctx context.Context, refID uuid.UUID, currentStatus, newStatus, rejectionNote string, verifiedBy uuid.UUID) (*models.AchievementReference, error)
 	GetAchievementDetail(ctx context.Context, mongoID string) (*models.Achievement, error)
+	GetReferenceByID(ctx context.Context, refID uuid.UUID) (*models.AchievementReference, error) // Tambahan
+	UpdateAchievement(ctx context.Context, mongoID string, update interface{}) error // Tambahan
+	UpdateReferenceUpdatedAt(ctx context.Context, refID uuid.UUID) (*models.AchievementReference, error) // Tambahan
+	ListAchievementReferences(ctx context.Context, studentIDs []uuid.UUID) ([]models.AchievementReference, error) // Tambahan
 }
 
 type achievementRepository struct {
@@ -38,7 +41,21 @@ func NewAchievementRepository(pgDB *pgxpool.Pool, mongoClient *mongo.Client) Ach
 	return &achievementRepository{pgDB: pgDB, mongoClient: mongoClient}
 }
 
-// CreateAchievementAndReference
+// GetReferenceByID
+func (r *achievementRepository) GetReferenceByID(ctx context.Context, refID uuid.UUID) (*models.AchievementReference, error) {
+	query := `SELECT id, student_id, mongo_achievement_id, status, submitted_at, verified_at, verified_by, rejection_note FROM achievement_references WHERE id = $1 AND is_deleted = FALSE`
+	ref := models.AchievementReference{}
+	err := r.pgDB.QueryRow(ctx, query, refID).Scan(
+		&ref.ID, &ref.StudentID, &ref.MongoAchievementID, &ref.Status, 
+		&ref.SubmittedAt, &ref.VerifiedAt, &ref.VerifiedBy, &ref.RejectionNote,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errors.New("achievement reference not found")
+	}
+	return &ref, err
+}
+
+// CreateAchievementAndReference (FR-003)
 func (r *achievementRepository) CreateAchievementAndReference(ctx context.Context, achievement *models.Achievement, studentID uuid.UUID) (*models.AchievementReference, error) {
 	mongoCollection := r.mongoClient.Database(MongoDatabaseName).Collection(MongoCollectionAchievements)
 
@@ -57,7 +74,7 @@ func (r *achievementRepository) CreateAchievementAndReference(ctx context.Contex
 		ID:                 uuid.New(),
 		StudentID:          studentID,
 		MongoAchievementID: achievement.ID.Hex(),
-		Status:             "draft",
+		[cite_start]Status:             "draft", // Status awal: 'draft' [cite: 187]
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
 		IsDeleted:          false,
@@ -67,15 +84,17 @@ func (r *achievementRepository) CreateAchievementAndReference(ctx context.Contex
 	_, err = r.pgDB.Exec(ctx, query, ref.ID, ref.StudentID, ref.MongoAchievementID, ref.Status, ref.CreatedAt, ref.UpdatedAt, ref.IsDeleted)
 
 	if err != nil {
+		// Rollback MongoDB insertion
 		_, _ = mongoCollection.DeleteOne(ctx, bson.M{"_id": achievement.ID})
 		return nil, fmt.Errorf("failed to insert reference: %w", err)
 	}
 	return &ref, nil
 }
 
-// SoftDeleteAchievementAndReference
+// SoftDeleteAchievementAndReference (FR-005)
 func (r *achievementRepository) SoftDeleteAchievementAndReference(ctx context.Context, achievementRefID uuid.UUID, studentID uuid.UUID) error {
 	var mongoID string
+	[cite_start]// Precondition: Status must be 'draft' [cite: 203] AND owned by studentID
 	queryRef := "SELECT mongo_achievement_id FROM achievement_references WHERE id = $1 AND student_id = $2 AND status = 'draft' AND is_deleted = FALSE"
 	err := r.pgDB.QueryRow(ctx, queryRef, achievementRefID, studentID).Scan(&mongoID)
 
@@ -83,6 +102,7 @@ func (r *achievementRepository) SoftDeleteAchievementAndReference(ctx context.Co
 		return errors.New("achievement not found or not editable")
 	}
 
+	[cite_start]// 1. Soft delete data di MongoDB [cite: 205]
 	objID, _ := primitive.ObjectIDFromHex(mongoID)
 	mongoColl := r.mongoClient.Database(MongoDatabaseName).Collection(MongoCollectionAchievements)
 	_, err = mongoColl.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": bson.M{"isDeleted": true}})
@@ -90,29 +110,113 @@ func (r *achievementRepository) SoftDeleteAchievementAndReference(ctx context.Co
 		return err
 	}
 
-	_, err = r.pgDB.Exec(ctx, "UPDATE achievement_references SET is_deleted = true WHERE id = $1", achievementRefID)
+	[cite_start]// 2. Update reference di PostgreSQL [cite: 206]
+	_, err = r.pgDB.Exec(ctx, "UPDATE achievement_references SET is_deleted = true, updated_at = NOW() WHERE id = $1", achievementRefID)
 	return err
 }
 
-// UpdateReferenceStatus
+// UpdateReferenceStatus (Workflow)
 func (r *achievementRepository) UpdateReferenceStatus(ctx context.Context, refID uuid.UUID, currentStatus, newStatus, rejectionNote string, verifiedBy uuid.UUID) (*models.AchievementReference, error) {
-	query := `UPDATE achievement_references SET status = $1, updated_at = $2 WHERE id = $3 AND status = $4 RETURNING id, status`
 	
 	ref := models.AchievementReference{}
-	err := r.pgDB.QueryRow(ctx, query, newStatus, time.Now(), refID, currentStatus).Scan(&ref.ID, &ref.Status)
 	
-	if err != nil {
-		return nil, err
+	// Base query
+	query := `UPDATE achievement_references SET status = $1, updated_at = NOW()`
+	args := []interface{}{newStatus}
+	argID := 2
+	
+	if newStatus == "submitted" {
+		query += fmt.Sprintf(", submitted_at = NOW()")
 	}
-	return &ref, nil
+	if newStatus == "verified" {
+		query += fmt.Sprintf(", verified_at = NOW(), verified_by = $%d", argID)
+		args = append(args, verifiedBy)
+		argID++
+	}
+	if newStatus == "rejected" {
+		query += fmt.Sprintf(", rejection_note = $%d, verified_by = $%d", argID, argID+1)
+		args = append(args, rejectionNote, verifiedBy)
+		argID += 2
+	}
+	
+	query += fmt.Sprintf(" WHERE id = $%d AND status = $%d RETURNING id, student_id, mongo_achievement_id, status, submitted_at, verified_at, verified_by, rejection_note", argID, argID+1)
+	args = append(args, refID, currentStatus)
+
+	err := r.pgDB.QueryRow(ctx, query, args...).Scan(
+		&ref.ID, &ref.StudentID, &ref.MongoAchievementID, &ref.Status, 
+		&ref.SubmittedAt, &ref.VerifiedAt, &ref.VerifiedBy, &ref.RejectionNote,
+	)
+	
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errors.New("achievement not found or status already changed")
+	}
+	return &ref, err
+}
+
+// UpdateAchievement (Update Mongo data)
+func (r *achievementRepository) UpdateAchievement(ctx context.Context, mongoID string, update interface{}) error {
+	objID, _ := primitive.ObjectIDFromHex(mongoID)
+	coll := r.mongoClient.Database(MongoDatabaseName).Collection(MongoCollectionAchievements)
+	
+	_, err := coll.UpdateOne(ctx, bson.M{"_id": objID, "isDeleted": false}, update)
+	return err
+}
+
+// UpdateReferenceUpdatedAt (Update PG reference only)
+func (r *achievementRepository) UpdateReferenceUpdatedAt(ctx context.Context, refID uuid.UUID) (*models.AchievementReference, error) {
+	query := `UPDATE achievement_references SET updated_at = NOW() WHERE id = $1 RETURNING *`
+	ref := models.AchievementReference{}
+	
+	err := r.pgDB.QueryRow(ctx, query, refID).Scan(
+		&ref.ID, &ref.StudentID, &ref.MongoAchievementID, &ref.Status, 
+		&ref.SubmittedAt, &ref.VerifiedAt, &ref.VerifiedBy, &ref.RejectionNote,
+		&ref.CreatedAt, &ref.UpdatedAt, &ref.IsDeleted,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errors.New("achievement reference not found")
+	}
+	return &ref, err
 }
 
 // GetAchievementDetail
 func (r *achievementRepository) GetAchievementDetail(ctx context.Context, mongoID string) (*models.Achievement, error) {
-	objID, _ := primitive.ObjectIDFromHex(mongoID)
+	objID, err := primitive.ObjectIDFromHex(mongoID)
+	if err != nil {
+		return nil, errors.New("invalid mongo ID")
+	}
 	coll := r.mongoClient.Database(MongoDatabaseName).Collection(MongoCollectionAchievements)
 	
 	var achievement models.Achievement
-	err := coll.FindOne(ctx, bson.M{"_id": objID}).Decode(&achievement)
+	err = coll.FindOne(ctx, bson.M{"_id": objID, "isDeleted": false}).Decode(&achievement)
 	return &achievement, err
+}
+
+// ListAchievementReferences
+func (r *achievementRepository) ListAchievementReferences(ctx context.Context, studentIDs []uuid.UUID) ([]models.AchievementReference, error) {
+	query := `SELECT id, student_id, mongo_achievement_id, status, submitted_at, verified_at, verified_by, rejection_note FROM achievement_references WHERE is_deleted = FALSE`
+	args := []interface{}{}
+	
+	if len(studentIDs) > 0 {
+		query += fmt.Sprintf(" AND student_id = ANY($%d)", 1)
+		args = append(args, studentIDs)
+	}
+
+	rows, err := r.pgDB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var achievements []models.AchievementReference
+	for rows.Next() {
+		var ref models.AchievementReference
+		if err := rows.Scan(
+			&ref.ID, &ref.StudentID, &ref.MongoAchievementID, &ref.Status, 
+			&ref.SubmittedAt, &ref.VerifiedAt, &ref.VerifiedBy, &ref.RejectionNote,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning achievement reference: %w", err)
+		}
+		achievements = append(achievements, ref)
+	}
+	return achievements, nil
 }

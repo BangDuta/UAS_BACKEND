@@ -1,144 +1,51 @@
 package routes
 
 import (
-	"encoding/json"
-	"net/http"
-
+	"prestasi-mahasiswa-api/controllers"
 	"prestasi-mahasiswa-api/middleware"
-	"prestasi-mahasiswa-api/models"
 	"prestasi-mahasiswa-api/repositories"
 	"prestasi-mahasiswa-api/services"
-	"prestasi-mahasiswa-api/utils"
 
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
+	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// RouteManager Struct
-type RouteManager struct {
-	AuthService        services.AuthService
-	AchievementService services.AchievementService
-}
-
-// Konstruktor RouteManager
-func NewRouteManager(pgDB *pgxpool.Pool, mongoClient *mongo.Client) *RouteManager {
+// SetupRoutes: Hanya berisi definisi endpoint (tidak ada logic handler)
+func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) {
+	// --- Dependency Injection ---
 	userRepo := repositories.NewUserRepository(pgDB)
 	achieveRepo := repositories.NewAchievementRepository(pgDB, mongoClient)
 
-	return &RouteManager{
-		AuthService:        services.NewAuthService(userRepo),
-		AchievementService: services.NewAchievementService(achieveRepo),
-	}
-}
+	authService := services.NewAuthService(userRepo)
+	achieveService := services.NewAchievementService(achieveRepo, userRepo) // Inject userRepo ke AchieveService
 
-// SetupRoutes
-func SetupRoutes(r *mux.Router, pgDB *pgxpool.Pool, mongoClient *mongo.Client) {
-	rm := NewRouteManager(pgDB, mongoClient)
-	v1 := r.PathPrefix("/api/v1").Subrouter()
+	authController := controllers.NewAuthController(authService)
+	achieveController := controllers.NewAchievementController(achieveService)
 
-	// Auth
-	auth := v1.PathPrefix("/auth").Subrouter()
-	auth.HandleFunc("/login", rm.Login).Methods("POST")
-	auth.HandleFunc("/profile", middleware.AuthRequired(rm.Profile)).Methods("GET")
+	// --- Grouping Routes ---
+	api := app.Group("/api/v1")
 
-	// Achievements
-	ach := v1.PathPrefix("/achievements").Subrouter()
-	ach.HandleFunc("", middleware.RBACRequired("achievement:create", rm.CreateAchievement)).Methods("POST")
-	ach.HandleFunc("/{id}", middleware.RBACRequired("achievement:delete", rm.DeleteAchievement)).Methods("DELETE")
-	ach.HandleFunc("/{id}/submit", middleware.RBACRequired("achievement:update", rm.SubmitAchievement)).Methods("POST")
-	ach.HandleFunc("/{id}/verify", middleware.RBACRequired("achievement:verify", rm.VerifyAchievement)).Methods("POST")
-	ach.HandleFunc("/{id}/reject", middleware.RBACRequired("achievement:verify", rm.RejectAchievement)).Methods("POST")
-}
+	// 1. Auth (FR-001)
+	auth := api.Group("/auth")
+	auth.Post("/login", authController.Login)
+	auth.Get("/profile", middleware.AuthRequired, authController.GetProfile) // FR-002 applied
 
-// --- Handler Methods ---
+	// 2. Achievements
+	ach := api.Group("/achievements", middleware.AuthRequired) // Semua butuh Auth
 
-func (rm *RouteManager) Login(w http.ResponseWriter, r *http.Request) {
-	var req models.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondWithError(w, 400, "Invalid Request")
-		return
-	}
-	resp, status, err := rm.AuthService.PerformLogin(r.Context(), req.Username, req.Password)
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, resp)
-}
-
-func (rm *RouteManager) Profile(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r.Context())
-	resp, status, err := rm.AuthService.GetProfile(r.Context(), claims.UserID)
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, resp)
-}
-
-func (rm *RouteManager) CreateAchievement(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r.Context())
-	var req models.CreateAchievementRequest
-	json.NewDecoder(r.Body).Decode(&req)
+	// Mahasiswa Actions (FR-003, FR-005)
+	ach.Post("/", middleware.RBACRequired("achievement:create"), achieveController.Create)
+	ach.Put("/:id", middleware.RBACRequired("achievement:update"), achieveController.Update) // Update Draft
+	ach.Delete("/:id", middleware.RBACRequired("achievement:delete"), achieveController.Delete)
+	ach.Post("/:id/submit", middleware.RBACRequired("achievement:update"), achieveController.Submit) // FR-004
 	
-	resp, status, err := rm.AchievementService.CreateDraft(r.Context(), claims.UserID, &req)
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, resp)
-}
-
-func (rm *RouteManager) DeleteAchievement(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r.Context())
-	vars := mux.Vars(r)
-	id, _ := uuid.Parse(vars["id"])
-
-	status, err := rm.AchievementService.DeleteDraft(r.Context(), claims.UserID, id)
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, map[string]string{"message": "deleted"})
-}
-
-func (rm *RouteManager) SubmitAchievement(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r.Context())
-	vars := mux.Vars(r)
-	id, _ := uuid.Parse(vars["id"])
-
-	resp, status, err := rm.AchievementService.SubmitForVerification(r.Context(), claims.UserID, id)
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, resp)
-}
-
-func (rm *RouteManager) VerifyAchievement(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r.Context())
-	vars := mux.Vars(r)
-	id, _ := uuid.Parse(vars["id"])
-
-	resp, status, err := rm.AchievementService.VerifyAchievement(r.Context(), claims.UserID, id)
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, resp)
-}
-
-func (rm *RouteManager) RejectAchievement(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserClaims(r.Context())
-	vars := mux.Vars(r)
-	id, _ := uuid.Parse(vars["id"])
-
-	resp, status, err := rm.AchievementService.RejectAchievement(r.Context(), claims.UserID, id, "Rejected")
-	if err != nil {
-		utils.RespondWithError(w, status, err.Error())
-		return
-	}
-	utils.RespondWithJSON(w, status, resp)
+	// Dosen Wali/Admin Read & Workflow (FR-006, FR-010, FR-007, FR-008)
+	ach.Get("/", achieveController.List) // Filtering logic is inside the service
+	ach.Get("/:id", achieveController.Detail)
+	ach.Post("/:id/verify", middleware.RBACRequired("achievement:verify"), achieveController.Verify)
+	ach.Post("/:id/reject", middleware.RBACRequired("achievement:verify"), achieveController.Reject)
+	
+	// Upload Attachments
+	ach.Post("/:id/attachments", middleware.RBACRequired("achievement:update"), achieveController.UploadAttachment)
 }

@@ -1,45 +1,43 @@
 package middleware
 
 import (
-	"context"
-	"net/http"
 	"strings"
 
-	"prestasi-mahasiswa-api/utils" // Pastikan import ini benar
+	"prestasi-mahasiswa-api/utils"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-// Kunci Context agar tidak bentrok
-type contextKey string
-
-const UserClaimsKey contextKey = "userClaims"
-
-// AuthRequired memvalidasi JWT
-func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Missing or invalid token")
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		claims, err := utils.ValidateJWT(tokenString)
-		if err != nil {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Invalid token")
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), UserClaimsKey, claims)
-		next(w, r.WithContext(ctx))
+// AuthRequired memvalidasi JWT untuk Fiber
+func AuthRequired(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Missing or invalid token",
+		})
 	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := utils.ValidateJWT(tokenString)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid token",
+		})
+	}
+
+	// Simpan claims ke Locals (Context Fiber)
+	c.Locals("userClaims", claims)
+	return c.Next()
 }
 
-// RBACRequired mengecek permission
-func RBACRequired(requiredPermission string, next http.HandlerFunc) http.HandlerFunc {
-	return AuthRequired(func(w http.ResponseWriter, r *http.Request) {
-		claims := GetUserClaims(r.Context())
+// RBACRequired mengecek permission (FR-002)
+func RBACRequired(requiredPermission string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Pastikan AuthRequired sudah dijalankan sebelumnya
+		claims := GetUserClaims(c)
 
 		hasPermission := false
 		for _, p := range claims.Permissions {
@@ -50,18 +48,21 @@ func RBACRequired(requiredPermission string, next http.HandlerFunc) http.Handler
 		}
 
 		if !hasPermission {
-			utils.RespondWithError(w, http.StatusForbidden, "Insufficient permissions")
-			return
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Insufficient permissions",
+			})
 		}
 
-		next(w, r)
-	})
+		return c.Next()
+	}
 }
 
-// Helper untuk mengambil claims dari context
-func GetUserClaims(ctx context.Context) *utils.Claims {
-	if claims, ok := ctx.Value(UserClaimsKey).(*utils.Claims); ok {
-		return claims
+// Helper untuk mengambil claims dari Fiber Context
+func GetUserClaims(c *fiber.Ctx) *utils.Claims {
+	claims, ok := c.Locals("userClaims").(*utils.Claims)
+	if !ok {
+		return &utils.Claims{UserID: uuid.Nil}
 	}
-	return &utils.Claims{UserID: uuid.Nil}
+	return claims
 }
