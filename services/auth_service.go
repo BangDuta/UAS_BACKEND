@@ -25,12 +25,12 @@ func NewAuthService(userRepo repositories.UserRepository) AuthService {
 	return &authService{userRepo: userRepo}
 }
 
-// PerformLogin mengimplementasikan flow login (FR-001)
+// PerformLogin
 func (s *authService) PerformLogin(ctx context.Context, username, password string) (*models.LoginResponse, int, error) {
 	// 1. Dapatkan user dari database
 	user, err := s.userRepo.FindUserByUsernameOrEmail(ctx, username)
 	if err != nil {
-		[cite_start]return nil, http.StatusUnauthorized, errors.New("invalid credentials") // 401 Unauthorized [cite: 348]
+		return nil, http.StatusUnauthorized, errors.New("invalid credentials")
 	}
 
 	// 2. Sistem memvalidasi kredensial
@@ -40,16 +40,16 @@ func (s *authService) PerformLogin(ctx context.Context, username, password strin
 
 	// 3. Sistem mengecek status aktif user
 	if !user.IsActive {
-		[cite_start]return nil, http.StatusForbidden, errors.New("user account is inactive") // 403 Forbidden [cite: 348]
+		return nil, http.StatusForbidden, errors.New("user account is inactive")
 	}
 
-	[cite_start]// 4. Sistem generate JWT token dengan role dan permissions [cite: 169]
+	// 4. Sistem generate JWT token
 	accessToken, refreshToken, err := utils.GenerateAuthTokens(user.ID.String(), user.Role, user.Permissions)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	[cite_start]// 5. Return token dan user profile [cite: 170]
+	// 5. Return token dan user profile
 	profile := models.UserProfile{
 		ID:          user.ID.String(),
 		Username:    user.Username,
@@ -73,7 +73,7 @@ func (s *authService) PerformLogin(ctx context.Context, username, password strin
 func (s *authService) GetProfile(ctx context.Context, userID uuid.UUID) (*models.UserProfile, int, error) {
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		[cite_start]return nil, http.StatusNotFound, errors.New("user profile not found") // 404 Not Found [cite: 348]
+		return nil, http.StatusNotFound, errors.New("user profile not found")
 	}
 
 	profile := models.UserProfile{

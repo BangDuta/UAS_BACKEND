@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,28 +19,19 @@ import (
 )
 
 func main() {
-	// Load environment variables (FR-001)
+	// 1. Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, relying on environment variables.")
 	}
 
-	// Inisialisasi Database
+	// 2. Inisialisasi Database
 	pgPool, mongoClient, err := database.ConnectDatabases()
 	if err != nil {
 		log.Fatalf("Failed to initialize databases: %v", err)
 	}
-	// Defer close connections
 	defer pgPool.Close()
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := mongoClient.Disconnect(ctx); err != nil {
-			log.Printf("Error disconnecting MongoDB: %v", err)
-		}
-	}()
-
-
-	// Init Fiber App
+	
+	// 3. Init Fiber App
 	app := fiber.New(fiber.Config{
 		AppName: "Sistem Pelaporan Prestasi Mahasiswa API",
 	})
@@ -50,10 +40,10 @@ func main() {
 	app.Use(cors.New())
 	app.Use(logger.New())
 
-	// Setup Routes (Dependency Injection)
+	// 4. Setup Routes
 	routes.SetupRoutes(app, pgPool, mongoClient)
 
-	// Start Server
+	// 5. Start Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
@@ -64,12 +54,20 @@ func main() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-		_ = <-c
+		// Block sampai sinyal diterima (Perbaikan S1005)
+		<-c
 		log.Println("Gracefully shutting down...")
 
 		// Shutdown Fiber
 		if err := app.Shutdown(); err != nil {
 			log.Printf("Error during Fiber shutdown: %v", err)
+		}
+		
+		// Disconnect MongoDB properly
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := mongoClient.Disconnect(ctx); err != nil {
+			log.Printf("Error disconnecting MongoDB: %v", err)
 		}
 	}()
 

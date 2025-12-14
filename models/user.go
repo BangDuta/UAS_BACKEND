@@ -47,3 +47,29 @@ type LoginResponse struct {
     Status string `json:"status"`
     Data   LoginData `json:"data"`
 }
+
+// --- Tambahan untuk Admin CRUD (FR-009) ---
+
+// Role merepresentasikan tabel roles
+type Role struct {
+    ID          uuid.UUID `json:"id"`
+    Name        string    `json:"name"`
+    Permissions []string  `json:"permissions"`
+}
+
+// CreateUserRequest untuk payload saat Admin membuat user baru
+type CreateUserRequest struct {
+    Username string `json:"username"`
+    Email    string `json:"email"`
+    Password string `json:"password"`
+    FullName string `json:"fullName"`
+    RoleName string `json:"roleName"`
+}
+
+// UpdateUserRequest untuk payload saat Admin mengupdate user
+type UpdateUserRequest struct {
+    FullName *string `json:"fullName"`
+    Email    *string `json:"email"`
+    RoleName *string `json:"roleName"`
+    IsActive *bool   `json:"isActive"`
+}
