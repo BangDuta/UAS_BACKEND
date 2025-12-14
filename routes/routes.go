@@ -24,11 +24,14 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	authService := services.NewAuthService(userRepo)
 	achieveService := services.NewAchievementService(achieveRepo, userRepo)
 	userService := services.NewUserService(userRepo, roleRepo) // NEW: User Service
-	
+	reportService := services.NewReportService(achieveRepo)
+
+
 	// Controllers
 	authController := controllers.NewAuthController(authService)
 	achieveController := controllers.NewAchievementController(achieveService)
-	userController := controllers.NewUserController(userService) // NEW: User Controller
+	userController := controllers.NewUserController(userService)
+	reportController := controllers.NewReportController(reportService) // NEW: User Controller
 
 	// 2. Grouping Routes
 	api := app.Group("/api/v1")
@@ -54,7 +57,7 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	ach.Post("/:id/verify", middleware.RBACRequired("achievement:verify"), achieveController.Verify)
 	ach.Post("/:id/reject", middleware.RBACRequired("achievement:verify"), achieveController.Reject)
 	
-	// --- NEW: Admin User Management Routes (FR-009) ---
+	
 	users := api.Group("/users", middleware.AuthRequired, middleware.RBACRequired("user:manage"))
 	
 	users.Get("/", userController.ListAllUsers)      // GET /api/v1/users
@@ -62,4 +65,7 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	users.Get("/:id", userController.GetUserByID)  // GET /api/v1/users/:id
 	users.Put("/:id", userController.UpdateUser)   // PUT /api/v1/users/:id
 	users.Delete("/:id", userController.DeleteUser)// DELETE /api/v1/users/:id (Deactivate)
+
+	reports := api.Group("/reports", middleware.AuthRequired)
+	reports.Get("/statistics", reportController.GetDashboardStats)
 }

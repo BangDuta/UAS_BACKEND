@@ -30,6 +30,9 @@ type AchievementRepository interface {
 	UpdateAchievement(ctx context.Context, mongoID string, update interface{}) error
 	UpdateReferenceUpdatedAt(ctx context.Context, refID uuid.UUID) (*models.AchievementReference, error)
 	ListAchievementReferences(ctx context.Context, studentIDs []uuid.UUID) ([]models.AchievementReference, error)
+
+	GetStatsByStatus(ctx context.Context, studentID *uuid.UUID) (map[string]int, error)
+	GetStatsByType(ctx context.Context, studentID *uuid.UUID) (map[string]int, error)
 }
 
 type achievementRepository struct {
@@ -215,4 +218,73 @@ func (r *achievementRepository) ListAchievementReferences(ctx context.Context, s
 		achievements = append(achievements, ref)
 	}
 	return achievements, nil
+}
+
+// GetStatsByStatus menghitung jumlah prestasi berdasarkan status dari PostgreSQL
+func (r *achievementRepository) GetStatsByStatus(ctx context.Context, studentID *uuid.UUID) (map[string]int, error) {
+	query := `SELECT status, COUNT(*) FROM achievement_references WHERE is_deleted = FALSE`
+	args := []interface{}{}
+	
+	if studentID != nil {
+		query += ` AND student_id = $1`
+		args = append(args, *studentID)
+	}
+	
+	query += ` GROUP BY status`
+
+	rows, err := r.pgDB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stats := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, err
+		}
+		stats[status] = count
+	}
+	return stats, nil
+}
+
+// GetStatsByType menghitung jumlah prestasi berdasarkan tipe dari MongoDB
+func (r *achievementRepository) GetStatsByType(ctx context.Context, studentID *uuid.UUID) (map[string]int, error) {
+	coll := r.mongoClient.Database(MongoDatabaseName).Collection(MongoCollectionAchievements)
+	
+	matchStage := bson.M{"isDeleted": false}
+	if studentID != nil {
+		matchStage["studentId"] = *studentID
+	}
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: matchStage}},
+		{{Key: "$group", Value: bson.M{
+			"_id":   "$achievementType",
+			"count": bson.M{"$sum": 1},
+		}}},
+	}
+
+	cursor, err := coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	stats := make(map[string]int)
+	var results []struct {
+		ID    string `bson:"_id"`
+		Count int    `bson:"count"`
+	}
+
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	for _, res := range results {
+		stats[res.ID] = res.Count
+	}
+	return stats, nil
 }
