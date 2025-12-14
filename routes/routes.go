@@ -18,12 +18,13 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	// Repositories
 	userRepo := repositories.NewUserRepository(pgDB)
 	achieveRepo := repositories.NewAchievementRepository(pgDB, mongoClient)
-	roleRepo := repositories.NewRoleRepository(pgDB) // NEW: Role Repo
+	roleRepo := repositories.NewRoleRepository(pgDB) 
+	profileRepo := repositories.NewProfileRepository(pgDB)
 	
 	// Services
 	authService := services.NewAuthService(userRepo)
 	achieveService := services.NewAchievementService(achieveRepo, userRepo)
-	userService := services.NewUserService(userRepo, roleRepo) // NEW: User Service
+	userService := services.NewUserService(userRepo, roleRepo, profileRepo) // NEW: User Service
 	reportService := services.NewReportService(achieveRepo)
 
 
@@ -65,6 +66,10 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	users.Get("/:id", userController.GetUserByID)  // GET /api/v1/users/:id
 	users.Put("/:id", userController.UpdateUser)   // PUT /api/v1/users/:id
 	users.Delete("/:id", userController.DeleteUser)// DELETE /api/v1/users/:id (Deactivate)
+
+	users.Post("/:id/student-profile", userController.SetStudentProfile)
+	users.Post("/:id/lecturer-profile", userController.SetLecturerProfile)
+	users.Put("/:id/advisor", userController.AssignAdvisor) // Set Dosen Wali untuk Mahasiswa
 
 	reports := api.Group("/reports", middleware.AuthRequired)
 	reports.Get("/statistics", reportController.GetDashboardStats)

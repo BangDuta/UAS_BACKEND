@@ -18,16 +18,25 @@ type UserService interface {
 	CreateUser(ctx context.Context, req *models.CreateUserRequest) (*models.User, int, error)
 	UpdateUser(ctx context.Context, userID uuid.UUID, req *models.UpdateUserRequest) (*models.User, int, error)
 	DeleteUser(ctx context.Context, userID uuid.UUID) (int, error) // Deactivate
+
+	SetStudentProfile(ctx context.Context, userID uuid.UUID, req *models.StudentProfileRequest) (*models.Student, int, error)
+	SetLecturerProfile(ctx context.Context, userID uuid.UUID, req *models.LecturerProfileRequest) (*models.Lecturer, int, error)
+	AssignAdvisor(ctx context.Context, studentUserID uuid.UUID, advisorUserID uuid.UUID) (int, error)
+
 }
 
 type userService struct {
 	userRepo repositories.UserRepository
 	roleRepo repositories.RoleRepository
+	profileRepo repositories.ProfileRepository
     // ... (opsional: student/lecturer repo jika logic set profile ada di sini)
 }
 
-func NewUserService(userRepo repositories.UserRepository, roleRepo repositories.RoleRepository) UserService {
-	return &userService{userRepo: userRepo, roleRepo: roleRepo}
+func NewUserService(userRepo repositories.UserRepository, roleRepo repositories.RoleRepository, profileRepo repositories.ProfileRepository) UserService {
+	return &userService{
+			userRepo: userRepo, 
+			roleRepo: roleRepo, 
+			profileRepo: profileRepo,}
 }
 
 // ListAllUsers
@@ -114,6 +123,59 @@ func (s *userService) DeleteUser(ctx context.Context, userID uuid.UUID) (int, er
 	err := s.userRepo.DeleteUser(ctx, userID)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("failed to deactivate user: %w", err)
+	}
+	return http.StatusOK, nil
+}
+
+func (s *userService) SetStudentProfile(ctx context.Context, userID uuid.UUID, req *models.StudentProfileRequest) (*models.Student, int, error) {
+	// Cek user exists
+	if _, err := s.userRepo.GetUserByID(ctx, userID); err != nil {
+		return nil, http.StatusNotFound, errors.New("user not found")
+	}
+
+	student := &models.Student{
+		UserID:       userID,
+		StudentID:    req.StudentID,
+		ProgramStudy: req.ProgramStudy,
+		AcademicYear: req.AcademicYear,
+	}
+
+	updated, err := s.profileRepo.UpsertStudent(ctx, student)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return updated, http.StatusOK, nil
+}
+
+func (s *userService) SetLecturerProfile(ctx context.Context, userID uuid.UUID, req *models.LecturerProfileRequest) (*models.Lecturer, int, error) {
+	if _, err := s.userRepo.GetUserByID(ctx, userID); err != nil {
+		return nil, http.StatusNotFound, errors.New("user not found")
+	}
+
+	lecturer := &models.Lecturer{
+		UserID:     userID,
+		LecturerID: req.LecturerID,
+		Department: req.Department,
+	}
+
+	updated, err := s.profileRepo.UpsertLecturer(ctx, lecturer)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return updated, http.StatusOK, nil
+}
+
+func (s *userService) AssignAdvisor(ctx context.Context, studentUserID uuid.UUID, advisorUserID uuid.UUID) (int, error) {
+	// 1. Cari Profil Dosen berdasarkan User ID Dosen
+	lecturer, err := s.profileRepo.GetLecturerByUserID(ctx, advisorUserID)
+	if err != nil {
+		return http.StatusNotFound, errors.New("advisor profile not found (user must have lecturer profile first)")
+	}
+
+	// 2. Update Student Profile dengan ID Dosen (Lecturer ID)
+	err = s.profileRepo.AssignAdvisor(ctx, studentUserID, lecturer.ID)
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
 }

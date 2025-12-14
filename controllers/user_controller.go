@@ -81,3 +81,62 @@ func (ctrl *UserController) DeleteUser(c *fiber.Ctx) error {
 	}
 	return c.Status(status).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("User %s has been deactivated", id.String())})
 }
+
+func (ctrl *UserController) SetStudentProfile(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid User ID"})
+	}
+
+	var req models.StudentProfileRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid body"})
+	}
+
+	res, status, err := ctrl.Service.SetStudentProfile(c.Context(), id, &req)
+	if err != nil {
+		return c.Status(status).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+	return c.Status(status).JSON(fiber.Map{"status": "success", "data": res})
+}
+
+func (ctrl *UserController) SetLecturerProfile(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid User ID"})
+	}
+
+	var req models.LecturerProfileRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid body"})
+	}
+
+	res, status, err := ctrl.Service.SetLecturerProfile(c.Context(), id, &req)
+	if err != nil {
+		return c.Status(status).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+	return c.Status(status).JSON(fiber.Map{"status": "success", "data": res})
+}
+
+func (ctrl *UserController) AssignAdvisor(c *fiber.Ctx) error {
+	studentUserID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid Student User ID"})
+	}
+
+	var req models.AssignAdvisorRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid body"})
+	}
+
+	advisorUUID, err := uuid.Parse(req.AdvisorUserID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Invalid Advisor User ID"})
+	}
+
+	status, err := ctrl.Service.AssignAdvisor(c.Context(), studentUserID, advisorUUID)
+	if err != nil {
+		return c.Status(status).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+	return c.Status(status).JSON(fiber.Map{"status": "success", "message": "Advisor assigned successfully"})
+}
