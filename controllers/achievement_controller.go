@@ -20,7 +20,17 @@ func NewAchievementController(service services.AchievementService) *AchievementC
 	return &AchievementController{Service: service}
 }
 
-// Create Achievement (FR-003)
+// Create Achievement godoc
+// @Summary      Create Achievement Draft
+// @Description  Mahasiswa membuat draft prestasi baru
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body models.CreateAchievementRequest true "Achievement Data"
+// @Success      201  {object}  models.AchievementReference
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements [post]
 func (ctrl *AchievementController) Create(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	var req models.CreateAchievementRequest
@@ -40,7 +50,19 @@ func (ctrl *AchievementController) Create(c *fiber.Ctx) error {
 	})
 }
 
-// Update Achievement Draft
+// Update Achievement godoc
+// @Summary      Update Achievement Draft
+// @Description  Mahasiswa mengedit data prestasi (hanya jika status draft)
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Param        request body models.CreateAchievementRequest true "Achievement Data"
+// @Success      200  {object}  models.AchievementReference
+// @Failure      400  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Router       /achievements/{id} [put]
 func (ctrl *AchievementController) Update(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -64,7 +86,17 @@ func (ctrl *AchievementController) Update(c *fiber.Ctx) error {
 	})
 }
 
-// Delete Achievement (FR-005)
+// Delete Achievement godoc
+// @Summary      Delete Achievement
+// @Description  Mahasiswa menghapus draft prestasi (Soft Delete)
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Success      200  {object}  map[string]string
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements/{id} [delete]
 func (ctrl *AchievementController) Delete(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -80,7 +112,17 @@ func (ctrl *AchievementController) Delete(c *fiber.Ctx) error {
 	return c.Status(status).JSON(fiber.Map{"status": "success", "message": "Achievement deleted"})
 }
 
-// Submit for Verification (FR-004)
+// Submit Achievement godoc
+// @Summary      Submit Achievement
+// @Description  Mahasiswa mengajukan prestasi draft untuk diverifikasi
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Success      200  {object}  models.AchievementReference
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements/{id}/submit [post]
 func (ctrl *AchievementController) Submit(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -96,7 +138,17 @@ func (ctrl *AchievementController) Submit(c *fiber.Ctx) error {
 	return c.Status(status).JSON(fiber.Map{"status": "success", "data": resp})
 }
 
-// Verify Achievement (FR-007)
+// Verify Achievement godoc
+// @Summary      Verify Achievement
+// @Description  Dosen Wali menyetujui prestasi mahasiswa
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Success      200  {object}  models.AchievementReference
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements/{id}/verify [post]
 func (ctrl *AchievementController) Verify(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -112,7 +164,18 @@ func (ctrl *AchievementController) Verify(c *fiber.Ctx) error {
 	return c.Status(status).JSON(fiber.Map{"status": "success", "data": resp})
 }
 
-// Reject Achievement (FR-008)
+// Reject Achievement godoc
+// @Summary      Reject Achievement
+// @Description  Dosen Wali menolak prestasi mahasiswa dengan catatan
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Param        request body map[string]string true "Rejection Note (key: rejectionNote)"
+// @Success      200  {object}  models.AchievementReference
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements/{id}/reject [post]
 func (ctrl *AchievementController) Reject(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -123,9 +186,7 @@ func (ctrl *AchievementController) Reject(c *fiber.Ctx) error {
 	var req struct {
 		RejectionNote string `json:"rejectionNote"`
 	}
-	// Mengambil rejection note dari body
 	if err := c.BodyParser(&req); err != nil {
-		// Jika body kosong atau tidak valid, gunakan default message
 		req.RejectionNote = "Rejected without specific note."
 	}
 	
@@ -137,11 +198,18 @@ func (ctrl *AchievementController) Reject(c *fiber.Ctx) error {
 	return c.Status(status).JSON(fiber.Map{"status": "success", "data": resp})
 }
 
-// List Achievements (FR-006, FR-010)
+// List Achievements godoc
+// @Summary      List Achievements
+// @Description  Melihat daftar prestasi (Mahasiswa: milik sendiri, Dosen: milik bimbingan, Admin: semua)
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {array}   models.AchievementDetailResponse
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements [get]
 func (ctrl *AchievementController) List(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
-	
-	// TODO: Add pagination parameters from query string here
 	
 	resp, status, err := ctrl.Service.ListFilteredAchievements(c.Context(), claims)
 	if err != nil {
@@ -151,11 +219,20 @@ func (ctrl *AchievementController) List(c *fiber.Ctx) error {
 	return c.Status(status).JSON(fiber.Map{
 		"status": "success",
 		"data": resp,
-		// TODO: Add pagination info here
 	})
 }
 
-// Detail Achievement
+// Detail Achievement godoc
+// @Summary      Get Achievement Detail
+// @Description  Melihat detail lengkap prestasi
+// @Tags         Achievements
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Success      200  {object}  models.AchievementDetailResponse
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements/{id} [get]
 func (ctrl *AchievementController) Detail(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -174,7 +251,18 @@ func (ctrl *AchievementController) Detail(c *fiber.Ctx) error {
 	})
 }
 
-// Upload Attachment (Tambahan)
+// Upload Attachment godoc
+// @Summary      Upload Attachment
+// @Description  Upload file bukti prestasi (PDF/Image)
+// @Tags         Achievements
+// @Accept       mpfd
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Achievement ID (UUID)"
+// @Param        attachment formData file true "File Attachment"
+// @Success      201  {object}  map[string]string
+// @Failure      400  {object}  map[string]string
+// @Router       /achievements/{id}/attachments [post]
 func (ctrl *AchievementController) UploadAttachment(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 	id, err := uuid.Parse(c.Params("id"))
@@ -187,29 +275,24 @@ func (ctrl *AchievementController) UploadAttachment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "error", "message": "Attachment file is required"})
 	}
 
-	// Pastikan direktori 'uploads' ada
 	uploadDir := "./uploads"
 	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
 		os.Mkdir(uploadDir, os.ModePerm)
 	}
 
-	// Simpan file ke server
 	filePath := fmt.Sprintf("%s/%s-%s", uploadDir, id.String(), file.Filename)
 	if err := c.SaveFile(file, filePath); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to save file"})
 	}
 
-	// Panggil Service untuk mencatat attachment di MongoDB
 	attachment := models.AttachmentFile{
 		FileName: file.Filename,
-		FileUrl:  filePath, // Di production, ini harusnya S3/Blob URL
+		FileUrl:  filePath,
 		FileType: file.Header.Get("Content-Type"),
-		// UploadedAt di-set di service
 	}
 
 	status, err := ctrl.Service.AddAttachment(c.Context(), claims.UserID, id, attachment)
 	if err != nil {
-		// Jika gagal update Mongo, lakukan cleanup file yang baru diupload
 		os.Remove(filePath)
 		return c.Status(status).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}

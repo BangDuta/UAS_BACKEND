@@ -7,6 +7,7 @@ import (
 	"prestasi-mahasiswa-api/services"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -20,7 +21,7 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	achieveRepo := repositories.NewAchievementRepository(pgDB, mongoClient)
 	roleRepo := repositories.NewRoleRepository(pgDB) 
 	profileRepo := repositories.NewProfileRepository(pgDB)
-	
+
 	// Services
 	authService := services.NewAuthService(userRepo)
 	achieveService := services.NewAchievementService(achieveRepo, userRepo)
@@ -33,6 +34,10 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	achieveController := controllers.NewAchievementController(achieveService)
 	userController := controllers.NewUserController(userService)
 	reportController := controllers.NewReportController(reportService) // NEW: User Controller
+
+// --- SWAGGER ROUTE ---
+    app.Get("/swagger/*", swagger.HandlerDefault) // Tambahkan ini
+
 
 	// 2. Grouping Routes
 	api := app.Group("/api/v1")

@@ -11,6 +11,9 @@ import (
 
 	"prestasi-mahasiswa-api/database"
 	"prestasi-mahasiswa-api/routes"
+    
+
+    _ "prestasi-mahasiswa-api/docs" 
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -18,6 +21,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// @title           Sistem Pelaporan Prestasi Mahasiswa API
+// @version         1.0
+// @description     API Server untuk manajemen prestasi mahasiswa, dosen wali, dan admin.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name    Tim Pengembang
+// @contact.email   support@unair.ac.id
+
+// @host            localhost:3000
+// @BasePath        /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// 1. Load environment variables
 	if err := godotenv.Load(); err != nil {
@@ -36,7 +53,6 @@ func main() {
 		AppName: "Sistem Pelaporan Prestasi Mahasiswa API",
 	})
 
-	// Middleware Global
 	app.Use(cors.New())
 	app.Use(logger.New())
 
@@ -54,16 +70,13 @@ func main() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-		// Block sampai sinyal diterima (Perbaikan S1005)
 		<-c
 		log.Println("Gracefully shutting down...")
 
-		// Shutdown Fiber
 		if err := app.Shutdown(); err != nil {
 			log.Printf("Error during Fiber shutdown: %v", err)
 		}
 		
-		// Disconnect MongoDB properly
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := mongoClient.Disconnect(ctx); err != nil {

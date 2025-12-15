@@ -15,7 +15,16 @@ func NewReportController(service services.ReportService) *ReportController {
 	return &ReportController{Service: service}
 }
 
-// GetDashboardStats Handler
+// Get Dashboard Stats godoc
+// @Summary      Get Dashboard Statistics
+// @Description  Melihat statistik prestasi (Total, Status, Tipe)
+// @Tags         Reports
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  models.DashboardStats
+// @Failure      500  {object}  map[string]string
+// @Router       /reports/statistics [get]
 func (ctrl *ReportController) GetDashboardStats(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
 
