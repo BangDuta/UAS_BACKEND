@@ -52,7 +52,7 @@ func (s *userService) ListAllUsers(ctx context.Context) ([]models.User, int, err
 func (s *userService) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, int, error) {
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		return nil, http.StatusNotFound, errors.New("User not found")
+		return nil, http.StatusNotFound, errors.New("user not found")
 	}
 	return user, http.StatusOK, nil
 }
@@ -65,7 +65,7 @@ func (s *userService) CreateUser(ctx context.Context, req *models.CreateUserRequ
 	// 2. Dapatkan RoleID
 	role, err := s.roleRepo.GetRoleByName(ctx, req.RoleName)
 	if err != nil || role == nil {
-		return nil, http.StatusBadRequest, errors.New("Invalid role name specified")
+		return nil, http.StatusBadRequest, errors.New("invalid role name specified")
 	}
 
 	// 3. Hash Password dan Buat User Object (menggunakan utils/password.go)
@@ -91,7 +91,7 @@ func (s *userService) CreateUser(ctx context.Context, req *models.CreateUserRequ
 func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, req *models.UpdateUserRequest) (*models.User, int, error) {
 	// 1. Cek User
 	if _, err := s.userRepo.GetUserByID(ctx, userID); err != nil {
-		return nil, http.StatusNotFound, errors.New("User not found")
+		return nil, http.StatusNotFound, errors.New("user not found")
 	}
 
 	// 2. Dapatkan RoleID baru jika RoleName diubah
@@ -99,7 +99,7 @@ func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, req *mod
 	if req.RoleName != nil && *req.RoleName != "" {
 		role, err := s.roleRepo.GetRoleByName(ctx, *req.RoleName)
 		if err != nil || role == nil {
-			return nil, http.StatusBadRequest, errors.New("Invalid role name specified")
+			return nil, http.StatusBadRequest, errors.New("invalid role name specified")
 		}
 		newRoleID = &role.ID
 	}
@@ -116,7 +116,7 @@ func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, req *mod
 func (s *userService) DeleteUser(ctx context.Context, userID uuid.UUID) (int, error) {
 	// 1. Cek User
 	if _, err := s.userRepo.GetUserByID(ctx, userID); err != nil {
-		return http.StatusNotFound, errors.New("User not found")
+		return http.StatusNotFound, errors.New("user not found")
 	}
 	
 	// 2. Nonaktifkan user

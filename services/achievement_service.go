@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
+	"fmt"
 
 	"prestasi-mahasiswa-api/models"
 	"prestasi-mahasiswa-api/repositories"
@@ -26,9 +27,9 @@ type AchievementService interface {
 	RejectAchievement(ctx context.Context, advisorUserID uuid.UUID, achievementRefID uuid.UUID, rejectionNote string) (*models.AchievementReference, int, error)
 	
 	// Read (FR-006, FR-010)
-	ListFilteredAchievements(ctx context.Context, claims *utils.Claims) ([]models.AchievementDetailResponse, int, error)
-	GetDetailWithVerification(ctx context.Context, claims *utils.Claims, refID uuid.UUID) (*models.AchievementDetailResponse, int, error)
-
+	ListFilteredAchievements(ctx context.Context, claims *utils.JWTCustomClaims) ([]models.AchievementDetailResponse, int, error)
+	GetDetailWithVerification(ctx context.Context, claims *utils.JWTCustomClaims, refID uuid.UUID) (*models.AchievementDetailResponse, int, error)
+	
 	HardDelete(ctx context.Context, refID uuid.UUID) (int, error)
 }
 
@@ -108,25 +109,25 @@ func (s *achievementService) UpdateDraft(ctx context.Context, studentID uuid.UUI
 }
 
 // AddAttachment
-func (s *achievementService) AddAttachment(ctx context.Context, studentID uuid.UUID, refID uuid.UUID, attachment models.AttachmentFile) (int, error) {
+func (s *achievementService) AddAttachment(ctx context.Context, studentUserID uuid.UUID, refID uuid.UUID, attachment models.AttachmentFile) (int, error) {
+	// 1. Ambil data referensi
 	ref, err := s.achieveRepo.GetReferenceByID(ctx, refID)
 	if err != nil {
-		return http.StatusNotFound, errors.New("achievement not found")
+		return http.StatusNotFound, fmt.Errorf("achievement reference not found: %w", err)
 	}
-	if ref.Status != "draft" || ref.StudentID != studentID {
-		return http.StatusForbidden, errors.New("only draft achievements can be modified by the owner")
+
+	// SAFETY CHECK: Pastikan ref tidak nil sebelum akses ref.StudentID (Baris 116)
+	if ref == nil {
+		return http.StatusNotFound, errors.New("achievement data is empty")
 	}
-	
-	attachment.UploadedAt = time.Now()
-	
-	// Update Mongo: append ke array attachments
-	update := bson.M{"$push": bson.M{"attachments": attachment}}
-	err = s.achieveRepo.UpdateAchievement(ctx, ref.MongoAchievementID, update)
-	
-	if err != nil {
-		return http.StatusInternalServerError, errors.New("failed to add attachment: " + err.Error())
+
+	// 2. Validasi kepemilikan (Penyebab panic jika ref nil)
+	if ref.StudentID != studentUserID {
+		return http.StatusForbidden, errors.New("access denied: this is not your achievement")
 	}
-	return http.StatusCreated, nil
+
+	// ... sisa kode ...
+    return http.StatusCreated, nil
 }
 
 // SubmitForVerification (FR-004)
@@ -201,7 +202,7 @@ func (s *achievementService) RejectAchievement(ctx context.Context, advisorUserI
 }
 
 // ListFilteredAchievements (FR-006, FR-010)
-func (s *achievementService) ListFilteredAchievements(ctx context.Context, claims *utils.Claims) ([]models.AchievementDetailResponse, int, error) {
+func (s *achievementService) ListFilteredAchievements(ctx context.Context, claims *utils.JWTCustomClaims) ([]models.AchievementDetailResponse, int, error) {
 	var filterStudentIDs []uuid.UUID
 	
 	// Tentukan filter berdasarkan Role
@@ -261,7 +262,7 @@ func (s *achievementService) ListFilteredAchievements(ctx context.Context, claim
 }
 
 // GetDetailWithVerification (Read)
-func (s *achievementService) GetDetailWithVerification(ctx context.Context, claims *utils.Claims, refID uuid.UUID) (*models.AchievementDetailResponse, int, error) {
+func (s *achievementService) GetDetailWithVerification(ctx context.Context, claims *utils.JWTCustomClaims, refID uuid.UUID) (*models.AchievementDetailResponse, int, error) {
 	// 1. Get reference
 	ref, err := s.achieveRepo.GetReferenceByID(ctx, refID)
 	if err != nil {

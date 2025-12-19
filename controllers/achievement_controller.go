@@ -201,10 +201,16 @@ func (ctrl *AchievementController) Detail(c *fiber.Ctx) error {
 
 // UploadAttachment godoc
 // @Summary      Upload Attachment
+// @Description  Unggah file bukti prestasi. Format yang diizinkan: JPG, PNG, dan PDF. Ukuran maksimal 5MB.
 // @Tags         Achievements
 // @Accept       mpfd
+// @Produce      json
 // @Security     BearerAuth
-// @Param        attachment formData file true "File"
+// @Param        id path string true "Achievement ID (UUID)"
+// @Param        attachment formData file true "File lampiran (JPG/PNG/PDF, Max 5MB)"
+// @Success      201  {object}  utils.JSONResponse
+// @Failure      400  {object}  utils.JSONResponse "Format file salah atau ukuran terlalu besar"
+// @Failure      500  {object}  utils.JSONResponse "Gagal menyimpan file di server"
 // @Router       /achievements/{id}/attachments [post]
 func (ctrl *AchievementController) UploadAttachment(c *fiber.Ctx) error {
 	claims := middleware.GetUserClaims(c)
@@ -218,6 +224,23 @@ func (ctrl *AchievementController) UploadAttachment(c *fiber.Ctx) error {
 		return utils.ErrorResponse(c, fiber.StatusBadRequest, "File is required")
 	}
 
+	// --- VALIDASI TIPE FILE ---
+	contentType := file.Header.Get("Content-Type")
+	allowedTypes := map[string]bool{
+		"image/jpeg":      true,
+		"image/png":       true,
+		"application/pdf": true,
+	}
+
+	if !allowedTypes[contentType] {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "Only images (JPG/PNG) and PDF are allowed")
+	}
+
+	// --- VALIDASI UKURAN FILE (Contoh: Max 5MB) ---
+	if file.Size > 5*1024*1024 {
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "File size too large (max 5MB)")
+	}
+
 	uploadDir := "./uploads"
 	os.MkdirAll(uploadDir, os.ModePerm)
 
@@ -229,12 +252,12 @@ func (ctrl *AchievementController) UploadAttachment(c *fiber.Ctx) error {
 	attachment := models.AttachmentFile{
 		FileName: file.Filename,
 		FileUrl:  filePath,
-		FileType: file.Header.Get("Content-Type"),
+		FileType: contentType,
 	}
 
 	status, err := ctrl.Service.AddAttachment(c.Context(), claims.UserID, id, attachment)
 	if err != nil {
-		os.Remove(filePath)
+		os.Remove(filePath) // Hapus file jika gagal update database
 		return utils.ErrorResponse(c, status, err.Error())
 	}
 
