@@ -26,50 +26,17 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Melihat daftar prestasi (Mahasiswa: milik sendiri, Dosen: milik bimbingan, Admin: semua)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Achievements"
                 ],
                 "summary": "List Achievements",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.AchievementDetailResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "responses": {}
             },
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
-                "description": "Mahasiswa membuat draft prestasi baru",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
                 ],
                 "tags": [
                     "Achievements"
@@ -90,16 +57,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.AchievementReference"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -112,56 +70,17 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Melihat detail lengkap prestasi",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Achievements"
                 ],
                 "summary": "Get Achievement Detail",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Achievement ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.AchievementDetailResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "responses": {}
             },
             "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
-                "description": "Mahasiswa mengedit data prestasi (hanya jika status draft)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
                 ],
                 "tags": [
                     "Achievements"
@@ -170,47 +89,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Achievement ID (UUID)",
+                        "description": "Achievement ID",
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "Achievement Data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateAchievementRequest"
-                        }
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.AchievementReference"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "responses": {}
             },
             "delete": {
                 "security": [
@@ -218,46 +103,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mahasiswa menghapus draft prestasi (Soft Delete)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Achievements"
                 ],
-                "summary": "Delete Achievement",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Achievement ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "summary": "Soft Delete Achievement",
+                "responses": {}
             }
         },
         "/achievements/{id}/attachments": {
@@ -267,12 +117,8 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload file bukti prestasi (PDF/Image)",
                 "consumes": [
                     "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
                 ],
                 "tags": [
                     "Achievements"
@@ -280,40 +126,29 @@ const docTemplate = `{
                 "summary": "Upload Attachment",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Achievement ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
                         "type": "file",
-                        "description": "File Attachment",
+                        "description": "File",
                         "name": "attachment",
                         "in": "formData",
                         "required": true
                     }
                 ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                "responses": {}
+            }
+        },
+        "/achievements/{id}/hard": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
                     }
-                }
+                ],
+                "description": "Hapus permanen dari PostgreSQL \u0026 MongoDB (Admin Only)",
+                "tags": [
+                    "Achievements"
+                ],
+                "summary": "Hard Delete Achievement",
+                "responses": {}
             }
         },
         "/achievements/{id}/reject": {
@@ -323,55 +158,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Dosen Wali menolak prestasi mahasiswa dengan catatan",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Achievements"
                 ],
-                "summary": "Reject Achievement",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Achievement ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Rejection Note (key: rejectionNote)",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.AchievementReference"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "summary": "Reject Achievement (Dosen Wali)",
+                "responses": {}
             }
         },
         "/achievements/{id}/submit": {
@@ -381,43 +172,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mahasiswa mengajukan prestasi draft untuk diverifikasi",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Achievements"
                 ],
                 "summary": "Submit Achievement",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Achievement ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.AchievementReference"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/achievements/{id}/verify": {
@@ -427,43 +186,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Dosen Wali menyetujui prestasi mahasiswa",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Achievements"
                 ],
-                "summary": "Verify Achievement",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Achievement ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.AchievementReference"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "summary": "Verify Achievement (Dosen Wali)",
+                "responses": {}
             }
         },
         "/auth/login": {
@@ -494,25 +221,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.LoginResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Logout dari sistem (Client harus menghapus token di sisi mereka)",
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout User",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -525,7 +262,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Mendapatkan data user yang sedang login berdasarkan Token",
+                "description": "Mendapatkan data profil user yang sedang login",
                 "consumes": [
                     "application/json"
                 ],
@@ -540,16 +277,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.UserProfile"
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -562,7 +296,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Melihat statistik prestasi (Total, Status, Tipe)",
+                "description": "Melihat ringkasan data statistik prestasi (Total, by Status, by Type)",
                 "consumes": [
                     "application/json"
                 ],
@@ -577,16 +311,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.DashboardStats"
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -599,7 +330,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin melihat semua user yang terdaftar",
+                "description": "Admin melihat semua daftar pengguna (Mahasiswa, Dosen, Admin)",
                 "consumes": [
                     "application/json"
                 ],
@@ -614,19 +345,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.User"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -637,7 +362,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin membuat user baru (Mahasiswa/Dosen/Admin)",
+                "description": "Admin membuat akun pengguna baru",
                 "consumes": [
                     "application/json"
                 ],
@@ -663,16 +388,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -685,7 +407,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin melihat detail user tertentu",
+                "description": "Admin melihat detail data pengguna berdasarkan UUID",
                 "consumes": [
                     "application/json"
                 ],
@@ -709,16 +431,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -729,7 +448,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin mengubah data user",
+                "description": "Admin memperbarui data pengguna",
                 "consumes": [
                     "application/json"
                 ],
@@ -762,16 +481,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -782,7 +498,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin menonaktifkan user (Soft Delete)",
+                "description": "Admin menonaktifkan akun pengguna",
                 "consumes": [
                     "application/json"
                 ],
@@ -792,7 +508,7 @@ const docTemplate = `{
                 "tags": [
                     "Users (Admin)"
                 ],
-                "summary": "Deactivate User",
+                "summary": "Deactivate User (Soft Delete)",
                 "parameters": [
                     {
                         "type": "string",
@@ -806,19 +522,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -831,7 +541,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Menunjuk Dosen Wali untuk Mahasiswa",
+                "description": "Menghubungkan mahasiswa dengan dosen walinya",
                 "consumes": [
                     "application/json"
                 ],
@@ -851,7 +561,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "User ID Dosen",
+                        "description": "User ID Dosen (UUID)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -864,19 +574,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -889,7 +587,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Melengkapi data profil Dosen (NIP, Department)",
+                "description": "Melengkapi data kepegawaian dosen (NIP, Departemen)",
                 "consumes": [
                     "application/json"
                 ],
@@ -909,7 +607,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Lecturer Profile",
+                        "description": "Lecturer Profile Data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -922,16 +620,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Lecturer"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -944,7 +633,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Melengkapi data profil Mahasiswa (NIM, Prodi)",
+                "description": "Melengkapi data akademik mahasiswa (NIM, Prodi, Tahun)",
                 "consumes": [
                     "application/json"
                 ],
@@ -964,7 +653,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Student Profile",
+                        "description": "Student Profile Data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -977,16 +666,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Student"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/utils.JSONResponse"
                         }
                     }
                 }
@@ -994,80 +674,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.AchievementDetailResponse": {
-            "type": "object",
-            "properties": {
-                "achievementType": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "details": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "points": {
-                    "type": "integer"
-                },
-                "refId": {
-                    "type": "string"
-                },
-                "rejectionNote": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "submittedAt": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "verifiedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.AchievementReference": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isDeleted": {
-                    "type": "boolean"
-                },
-                "mongoAchievementId": {
-                    "type": "string"
-                },
-                "rejectionNote": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "studentId": {
-                    "type": "string"
-                },
-                "submittedAt": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "verifiedAt": {
-                    "type": "string"
-                },
-                "verifiedBy": {
-                    "type": "string"
-                }
-            }
-        },
         "models.AssignAdvisorRequest": {
             "type": "object",
             "properties": {
@@ -1124,47 +730,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.DashboardStats": {
-            "type": "object",
-            "properties": {
-                "byStatus": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
-                "byType": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
-                "totalAchievements": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.Lecturer": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "department": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "lecturerId": {
-                    "description": "NIP",
-                    "type": "string"
-                },
-                "userId": {
-                    "type": "string"
-                }
-            }
-        },
         "models.LecturerProfileRequest": {
             "type": "object",
             "properties": {
@@ -1177,20 +742,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.LoginData": {
-            "type": "object",
-            "properties": {
-                "refreshToken": {
-                    "type": "string"
-                },
-                "token": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/models.UserProfile"
-                }
-            }
-        },
         "models.LoginRequest": {
             "type": "object",
             "properties": {
@@ -1198,45 +749,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.LoginResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/models.LoginData"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Student": {
-            "type": "object",
-            "properties": {
-                "academicYear": {
-                    "type": "string"
-                },
-                "advisorId": {
-                    "description": "Link ke ID tabel Lecturers (bukan User ID)",
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "programStudy": {
-                    "type": "string"
-                },
-                "studentId": {
-                    "description": "NIM",
-                    "type": "string"
-                },
-                "userId": {
                     "type": "string"
                 }
             }
@@ -1273,63 +785,14 @@ const docTemplate = `{
                 }
             }
         },
-        "models.User": {
+        "utils.JSONResponse": {
             "type": "object",
             "properties": {
-                "createdAt": {
+                "data": {},
+                "message": {
                     "type": "string"
                 },
-                "email": {
-                    "type": "string"
-                },
-                "fullName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "role": {
-                    "type": "string"
-                },
-                "roleId": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.UserProfile": {
-            "type": "object",
-            "properties": {
-                "fullName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "role": {
-                    "type": "string"
-                },
-                "username": {
+                "status": {
                     "type": "string"
                 }
             }

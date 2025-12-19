@@ -1,54 +1,5 @@
 basePath: /api/v1
 definitions:
-  models.AchievementDetailResponse:
-    properties:
-      achievementType:
-        type: string
-      description:
-        type: string
-      details:
-        additionalProperties: true
-        type: object
-      points:
-        type: integer
-      refId:
-        type: string
-      rejectionNote:
-        type: string
-      status:
-        type: string
-      submittedAt:
-        type: string
-      title:
-        type: string
-      verifiedAt:
-        type: string
-    type: object
-  models.AchievementReference:
-    properties:
-      createdAt:
-        type: string
-      id:
-        type: string
-      isDeleted:
-        type: boolean
-      mongoAchievementId:
-        type: string
-      rejectionNote:
-        type: string
-      status:
-        type: string
-      studentId:
-        type: string
-      submittedAt:
-        type: string
-      updatedAt:
-        type: string
-      verifiedAt:
-        type: string
-      verifiedBy:
-        type: string
-    type: object
   models.AssignAdvisorRequest:
     properties:
       advisorUserId:
@@ -86,33 +37,6 @@ definitions:
       username:
         type: string
     type: object
-  models.DashboardStats:
-    properties:
-      byStatus:
-        additionalProperties:
-          type: integer
-        type: object
-      byType:
-        additionalProperties:
-          type: integer
-        type: object
-      totalAchievements:
-        type: integer
-    type: object
-  models.Lecturer:
-    properties:
-      createdAt:
-        type: string
-      department:
-        type: string
-      id:
-        type: string
-      lecturerId:
-        description: NIP
-        type: string
-      userId:
-        type: string
-    type: object
   models.LecturerProfileRequest:
     properties:
       department:
@@ -121,46 +45,11 @@ definitions:
         description: NIP
         type: string
     type: object
-  models.LoginData:
-    properties:
-      refreshToken:
-        type: string
-      token:
-        type: string
-      user:
-        $ref: '#/definitions/models.UserProfile'
-    type: object
   models.LoginRequest:
     properties:
       password:
         type: string
       username:
-        type: string
-    type: object
-  models.LoginResponse:
-    properties:
-      data:
-        $ref: '#/definitions/models.LoginData'
-      status:
-        type: string
-    type: object
-  models.Student:
-    properties:
-      academicYear:
-        type: string
-      advisorId:
-        description: Link ke ID tabel Lecturers (bukan User ID)
-        type: string
-      createdAt:
-        type: string
-      id:
-        type: string
-      programStudy:
-        type: string
-      studentId:
-        description: NIM
-        type: string
-      userId:
         type: string
     type: object
   models.StudentProfileRequest:
@@ -184,44 +73,12 @@ definitions:
       roleName:
         type: string
     type: object
-  models.User:
+  utils.JSONResponse:
     properties:
-      createdAt:
+      data: {}
+      message:
         type: string
-      email:
-        type: string
-      fullName:
-        type: string
-      id:
-        type: string
-      isActive:
-        type: boolean
-      permissions:
-        items:
-          type: string
-        type: array
-      role:
-        type: string
-      roleId:
-        type: string
-      updatedAt:
-        type: string
-      username:
-        type: string
-    type: object
-  models.UserProfile:
-    properties:
-      fullName:
-        type: string
-      id:
-        type: string
-      permissions:
-        items:
-          type: string
-        type: array
-      role:
-        type: string
-      username:
+      status:
         type: string
     type: object
 host: localhost:3000
@@ -236,34 +93,13 @@ info:
 paths:
   /achievements:
     get:
-      consumes:
-      - application/json
-      description: 'Melihat daftar prestasi (Mahasiswa: milik sendiri, Dosen: milik
-        bimbingan, Admin: semua)'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.AchievementDetailResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
       summary: List Achievements
       tags:
       - Achievements
     post:
-      consumes:
-      - application/json
-      description: Mahasiswa membuat draft prestasi baru
       parameters:
       - description: Achievement Data
         in: body
@@ -271,19 +107,11 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/models.CreateAchievementRequest'
-      produces:
-      - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.AchievementReference'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Create Achievement Draft
@@ -291,98 +119,27 @@ paths:
       - Achievements
   /achievements/{id}:
     delete:
-      consumes:
-      - application/json
-      description: Mahasiswa menghapus draft prestasi (Soft Delete)
-      parameters:
-      - description: Achievement ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
-      summary: Delete Achievement
+      summary: Soft Delete Achievement
       tags:
       - Achievements
     get:
-      consumes:
-      - application/json
-      description: Melihat detail lengkap prestasi
-      parameters:
-      - description: Achievement ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.AchievementDetailResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
       summary: Get Achievement Detail
       tags:
       - Achievements
     put:
-      consumes:
-      - application/json
-      description: Mahasiswa mengedit data prestasi (hanya jika status draft)
       parameters:
-      - description: Achievement ID (UUID)
+      - description: Achievement ID
         in: path
         name: id
         required: true
         type: string
-      - description: Achievement Data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateAchievementRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.AchievementReference'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
       summary: Update Achievement Draft
@@ -392,99 +149,38 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Upload file bukti prestasi (PDF/Image)
       parameters:
-      - description: Achievement ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: File Attachment
+      - description: File
         in: formData
         name: attachment
         required: true
         type: file
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
       summary: Upload Attachment
       tags:
       - Achievements
-  /achievements/{id}/reject:
-    post:
-      consumes:
-      - application/json
-      description: Dosen Wali menolak prestasi mahasiswa dengan catatan
-      parameters:
-      - description: Achievement ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: 'Rejection Note (key: rejectionNote)'
-        in: body
-        name: request
-        required: true
-        schema:
-          additionalProperties:
-            type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.AchievementReference'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+  /achievements/{id}/hard:
+    delete:
+      description: Hapus permanen dari PostgreSQL & MongoDB (Admin Only)
+      responses: {}
       security:
       - BearerAuth: []
-      summary: Reject Achievement
+      summary: Hard Delete Achievement
+      tags:
+      - Achievements
+  /achievements/{id}/reject:
+    post:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Reject Achievement (Dosen Wali)
       tags:
       - Achievements
   /achievements/{id}/submit:
     post:
-      consumes:
-      - application/json
-      description: Mahasiswa mengajukan prestasi draft untuk diverifikasi
-      parameters:
-      - description: Achievement ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.AchievementReference'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
       summary: Submit Achievement
@@ -492,31 +188,10 @@ paths:
       - Achievements
   /achievements/{id}/verify:
     post:
-      consumes:
-      - application/json
-      description: Dosen Wali menyetujui prestasi mahasiswa
-      parameters:
-      - description: Achievement ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.AchievementReference'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+      responses: {}
       security:
       - BearerAuth: []
-      summary: Verify Achievement
+      summary: Verify Achievement (Dosen Wali)
       tags:
       - Achievements
   /auth/login:
@@ -538,40 +213,43 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.LoginResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       summary: Login User
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      description: Logout dari sistem (Client harus menghapus token di sisi mereka)
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.JSONResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout User
       tags:
       - Auth
   /auth/profile:
     get:
       consumes:
       - application/json
-      description: Mendapatkan data user yang sedang login berdasarkan Token
+      description: Mendapatkan data profil user yang sedang login
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.UserProfile'
+            $ref: '#/definitions/utils.JSONResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Get User Profile
@@ -581,20 +259,19 @@ paths:
     get:
       consumes:
       - application/json
-      description: Melihat statistik prestasi (Total, Status, Tipe)
+      description: Melihat ringkasan data statistik prestasi (Total, by Status, by
+        Type)
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.DashboardStats'
+            $ref: '#/definitions/utils.JSONResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Get Dashboard Statistics
@@ -604,22 +281,18 @@ paths:
     get:
       consumes:
       - application/json
-      description: Admin melihat semua user yang terdaftar
+      description: Admin melihat semua daftar pengguna (Mahasiswa, Dosen, Admin)
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.User'
-            type: array
+            $ref: '#/definitions/utils.JSONResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: List All Users
@@ -628,7 +301,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Admin membuat user baru (Mahasiswa/Dosen/Admin)
+      description: Admin membuat akun pengguna baru
       parameters:
       - description: User Data
         in: body
@@ -642,13 +315,11 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.User'
+            $ref: '#/definitions/utils.JSONResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Create New User
@@ -658,7 +329,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Admin menonaktifkan user (Soft Delete)
+      description: Admin menonaktifkan akun pengguna
       parameters:
       - description: User ID (UUID)
         in: path
@@ -671,24 +342,20 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
-      summary: Deactivate User
+      summary: Deactivate User (Soft Delete)
       tags:
       - Users (Admin)
     get:
       consumes:
       - application/json
-      description: Admin melihat detail user tertentu
+      description: Admin melihat detail data pengguna berdasarkan UUID
       parameters:
       - description: User ID (UUID)
         in: path
@@ -701,13 +368,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            $ref: '#/definitions/utils.JSONResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Get User By ID
@@ -716,7 +381,7 @@ paths:
     put:
       consumes:
       - application/json
-      description: Admin mengubah data user
+      description: Admin memperbarui data pengguna
       parameters:
       - description: User ID (UUID)
         in: path
@@ -735,13 +400,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.User'
+            $ref: '#/definitions/utils.JSONResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Update User
@@ -751,14 +414,14 @@ paths:
     put:
       consumes:
       - application/json
-      description: Menunjuk Dosen Wali untuk Mahasiswa
+      description: Menghubungkan mahasiswa dengan dosen walinya
       parameters:
       - description: User ID Mahasiswa (UUID)
         in: path
         name: id
         required: true
         type: string
-      - description: User ID Dosen
+      - description: User ID Dosen (UUID)
         in: body
         name: request
         required: true
@@ -770,15 +433,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Assign Advisor to Student
@@ -788,14 +443,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Melengkapi data profil Dosen (NIP, Department)
+      description: Melengkapi data kepegawaian dosen (NIP, Departemen)
       parameters:
       - description: User ID (UUID)
         in: path
         name: id
         required: true
         type: string
-      - description: Lecturer Profile
+      - description: Lecturer Profile Data
         in: body
         name: request
         required: true
@@ -807,13 +462,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Lecturer'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Set Lecturer Profile
@@ -823,14 +472,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Melengkapi data profil Mahasiswa (NIM, Prodi)
+      description: Melengkapi data akademik mahasiswa (NIM, Prodi, Tahun)
       parameters:
       - description: User ID (UUID)
         in: path
         name: id
         required: true
         type: string
-      - description: Student Profile
+      - description: Student Profile Data
         in: body
         name: request
         required: true
@@ -842,13 +491,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Student'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/utils.JSONResponse'
       security:
       - BearerAuth: []
       summary: Set Student Profile

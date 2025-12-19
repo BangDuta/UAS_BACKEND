@@ -28,6 +28,8 @@ type AchievementService interface {
 	// Read (FR-006, FR-010)
 	ListFilteredAchievements(ctx context.Context, claims *utils.Claims) ([]models.AchievementDetailResponse, int, error)
 	GetDetailWithVerification(ctx context.Context, claims *utils.Claims, refID uuid.UUID) (*models.AchievementDetailResponse, int, error)
+
+	HardDelete(ctx context.Context, refID uuid.UUID) (int, error)
 }
 
 type achievementService struct {
@@ -302,4 +304,12 @@ func (s *achievementService) GetDetailWithVerification(ctx context.Context, clai
 	}
 	
 	return response, http.StatusOK, nil
+}
+
+func (s *achievementService) HardDelete(ctx context.Context, refID uuid.UUID) (int, error) {
+	err := s.achieveRepo.HardDeleteAchievement(ctx, refID)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }

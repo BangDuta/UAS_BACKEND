@@ -45,6 +45,7 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	// --- Auth Routes ---
 	auth := api.Group("/auth")
 	auth.Post("/login", authController.Login)
+	auth.Post("/logout", middleware.AuthRequired, authController.Logout)
 	auth.Get("/profile", middleware.AuthRequired, authController.GetProfile)
 
 	// --- Achievements Routes ---
@@ -62,6 +63,7 @@ func SetupRoutes(app *fiber.App, pgDB *pgxpool.Pool, mongoClient *mongo.Client) 
 	ach.Get("/:id", achieveController.Detail)
 	ach.Post("/:id/verify", middleware.RBACRequired("achievement:verify"), achieveController.Verify)
 	ach.Post("/:id/reject", middleware.RBACRequired("achievement:verify"), achieveController.Reject)
+	ach.Delete("/:id/hard", middleware.RBACRequired("achievement:delete"), achieveController.HardDelete)
 	
 	
 	users := api.Group("/users", middleware.AuthRequired, middleware.RBACRequired("user:manage"))

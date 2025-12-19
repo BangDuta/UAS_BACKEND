@@ -30,9 +30,10 @@ type AchievementRepository interface {
 	UpdateAchievement(ctx context.Context, mongoID string, update interface{}) error
 	UpdateReferenceUpdatedAt(ctx context.Context, refID uuid.UUID) (*models.AchievementReference, error)
 	ListAchievementReferences(ctx context.Context, studentIDs []uuid.UUID) ([]models.AchievementReference, error)
-
 	GetStatsByStatus(ctx context.Context, studentID *uuid.UUID) (map[string]int, error)
 	GetStatsByType(ctx context.Context, studentID *uuid.UUID) (map[string]int, error)
+	// NEW: Hard Delete
+	HardDeleteAchievement(ctx context.Context, refID uuid.UUID) error
 }
 
 type achievementRepository struct {
@@ -287,4 +288,22 @@ func (r *achievementRepository) GetStatsByType(ctx context.Context, studentID *u
 		stats[res.ID] = res.Count
 	}
 	return stats, nil
+}
+
+func (r *achievementRepository) HardDeleteAchievement(ctx context.Context, refID uuid.UUID) error {
+	var mongoID string
+	err := r.pgDB.QueryRow(ctx, "SELECT mongo_achievement_id FROM achievement_references WHERE id = $1", refID).Scan(&mongoID)
+	if err != nil {
+		return fmt.Errorf("reference not found: %w", err)
+	}
+
+	objID, _ := primitive.ObjectIDFromHex(mongoID)
+	coll := r.mongoClient.Database(MongoDatabaseName).Collection(MongoCollectionAchievements)
+	_, err = coll.DeleteOne(ctx, bson.M{"_id": objID})
+	if err != nil {
+		return fmt.Errorf("failed to delete mongo doc: %w", err)
+	}
+
+	_, err = r.pgDB.Exec(ctx, "DELETE FROM achievement_references WHERE id = $1", refID)
+	return err
 }
